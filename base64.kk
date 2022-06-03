@@ -1,31 +1,55 @@
+import std/num/int32
+
 // Get the length of a list
 fun list_length(xs: list<a>) : int
   length(xs)
 
+fun prepend(xs: list<a>, x: a) : list<a>
+  Cons(x, xs)
+
+// Convert a byte to a list of bits
+fun base_2(x: int32) : exn list<bool>
+  fun go(acc, pos)
+    acc.prepend(is-odd(x.rotr(pos)))
+  if x > uint32(255)
+    then throw ("base_2 only support int8")
+    else list(0, 7).foldl([], go)
+
 // Decode a hex char into a list of bits, encoded as bool
-fun decode_hexchar(c: char) : exn list<bool>
+fun decode_hexchar(c: char) : exn int
   match c
-    '0' -> [False, False, False, False]
-    '1' -> [False, False, False,  True]
-    '2' -> [False, False,  True, False]
-    '3' -> [False, False,  True,  True]
-    '4' -> [False,  True, False, False]
-    '5' -> [False,  True, False,  True]
-    '6' -> [False,  True,  True, False]
-    '7' -> [False,  True,  True,  True]
-    '8' -> [ True, False, False, False]
-    '9' -> [ True, False, False,  True]
-    'a' -> [ True, False,  True, False]
-    'b' -> [ True, False,  True,  True]
-    'c' -> [ True,  True, False, False]
-    'd' -> [ True,  True, False,  True]
-    'e' -> [ True,  True,  True, False]
-    'f' -> [ True,  True,  True,  True]
+    '0' -> 0
+    '1' -> 1
+    '2' -> 2
+    '3' -> 3
+    '4' -> 4
+    '5' -> 5
+    '6' -> 6
+    '7' -> 7
+    '8' -> 8
+    '9' -> 9
+    'a' -> 10
+    'b' -> 11
+    'c' -> 12
+    'd' -> 13
+    'e' -> 14
+    'f' -> 15
     _   -> throw("Invalid hex char")
 
-// Decode a hex string into a list of bits
-fun decode_hex(s: string) : exn list<bool>
-  s.list().flatmap(decode_hexchar)
+fun decode_hexchars(p: (char, char)) : exn int
+  decode_hexchar(p.fst).int32().rotl(4).int() + decode_hexchar(p.snd)
+
+fun group_by_2(l: list<a>) : exn list<(a, a)>
+  fun go(rest, acc)
+    match rest
+      Cons(x, Cons(y, xs)) -> go(xs, acc.prepend((x, y)))
+      Nil -> acc
+      _ -> throw("Un-even list")
+  go(l, []).reverse()
+
+// Decode a hex string into a list of byte
+fun decode_hex(s: string) : exn list<int>
+  s.list().group_by_2().map(decode_hexchars)
 
 // Chunk a list
 fun chunks(xs: list<a>, size: int) : list<list<a>>
@@ -113,9 +137,9 @@ fun encode_base64(xs: list<list<bool>>) : exn list<char>
   xs.map(encode_base64_chunk)
 
 fun solve_challenge1(s: string) : exn string
-  s.decode_hex().chunks(6).encode_base64().string()
+  s.decode_hex().map(int32).flatmap(base_2).chunks(6).encode_base64().string()
 
-fun test_challenge1()
+fun test_challenge1() : <console,exn> ()
   val input = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d"
   val expected = "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
   val got = solve_challenge1(input)
